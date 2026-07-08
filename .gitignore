@@ -1,0 +1,50 @@
+# Build output
+/zcyp-im
+/bin/
+/dist/
+/build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace / cache
+go.work
+go.work.sum
+
+# Env / local config
+.env
+.env.*
+!.env.example
+config.local.*
+*.local.yaml
+*.local.yml
+*.local.toml
+*.local.json
+
+# Logs
+*.log
+logs/
+
+# Runtime / temp
+tmp/
+temp/
+*.pid
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Coverage
+coverage.out
+coverage.html
+*.coverprofile
+
+# Generated files, if later used
+*.pb.go
