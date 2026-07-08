@@ -1,0 +1,24 @@
+http:
+  host: "0.0.0.0"
+  port: 9011
+
+mysql:
+  enabled: false
+  host: "127.0.0.1"
+  port: 3306
+  database: "zcyp_im"
+  username: "root"
+  password: ""
+  charset: "utf8mb4"
+  parse_time: true
+  max_open_conns: 20
+  max_idle_conns: 10
+  conn_max_lifetime_minutes: 30
+
+jwt:
+  secret: "change-me"
+  issuer: "zcyp-im"
+  expire_hours: 24
+
+moderation:
+  blocked_words: []

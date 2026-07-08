@@ -32,6 +32,7 @@ logs/
 # Runtime / temp
 tmp/
 temp/
+.cache/
 *.pid
 
 # IDE / editor

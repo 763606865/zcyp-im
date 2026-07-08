@@ -1,13 +1,18 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	"log"
+
+	"zcyp-im/internal/app"
+)
 
 func main() {
-	r := gin.Default()
+	server, err := app.NewServer()
+	if err != nil {
+		log.Fatalf("init server: %v", err)
+	}
 
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
-
-	r.Run(":8080")
+	if err := server.Run(); err != nil {
+		log.Fatalf("run server: %v", err)
+	}
 }
