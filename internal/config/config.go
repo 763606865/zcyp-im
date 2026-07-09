@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	HTTP       HTTPConfig       `mapstructure:"http"`
+	WebSocket  HTTPConfig       `mapstructure:"websocket"`
 	MySQL      MySQLConfig      `mapstructure:"mysql"`
 	JWT        JWTConfig        `mapstructure:"jwt"`
 	Moderation ModerationConfig `mapstructure:"moderation"`
@@ -57,6 +58,8 @@ func Load() (Config, error) {
 
 	v.SetDefault("http.host", "0.0.0.0")
 	v.SetDefault("http.port", 8080)
+	v.SetDefault("websocket.host", "0.0.0.0")
+	v.SetDefault("websocket.port", 9012)
 	v.SetDefault("mysql.enabled", false)
 	v.SetDefault("mysql.host", "127.0.0.1")
 	v.SetDefault("mysql.port", 3306)

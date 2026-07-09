@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"zcyp-im/internal/response"
 	"zcyp-im/internal/service"
 )
 
@@ -25,13 +26,13 @@ func (h *MemberHandler) ListMembers(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"items": items})
+	response.OK(c, gin.H{"items": items})
 }
 
 func (h *MemberHandler) AddMembers(c *gin.Context) {
 	var req service.AddConversationMembersInput
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -46,7 +47,7 @@ func (h *MemberHandler) AddMembers(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"items": items})
+	response.OK(c, gin.H{"items": items})
 }
 
 func (h *MemberHandler) RemoveMember(c *gin.Context) {
@@ -63,7 +64,7 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) JoinConversation(c *gin.Context) {
@@ -78,7 +79,7 @@ func (h *MemberHandler) JoinConversation(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) LeaveConversation(c *gin.Context) {
@@ -93,7 +94,7 @@ func (h *MemberHandler) LeaveConversation(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) BanMember(c *gin.Context) {
@@ -109,7 +110,7 @@ func (h *MemberHandler) BanMember(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) UnbanMember(c *gin.Context) {
@@ -125,7 +126,7 @@ func (h *MemberHandler) UnbanMember(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) UpdateMemberRole(c *gin.Context) {
@@ -133,7 +134,7 @@ func (h *MemberHandler) UpdateMemberRole(c *gin.Context) {
 		Role string `json:"role" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -150,7 +151,7 @@ func (h *MemberHandler) UpdateMemberRole(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) MuteMember(c *gin.Context) {
@@ -158,7 +159,7 @@ func (h *MemberHandler) MuteMember(c *gin.Context) {
 		Minutes int `json:"minutes" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -175,7 +176,7 @@ func (h *MemberHandler) MuteMember(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) UnmuteMember(c *gin.Context) {
@@ -191,7 +192,7 @@ func (h *MemberHandler) UnmuteMember(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) UpdateConversationAllMuted(c *gin.Context) {
@@ -199,7 +200,7 @@ func (h *MemberHandler) UpdateConversationAllMuted(c *gin.Context) {
 		Enabled bool `json:"enabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -215,7 +216,7 @@ func (h *MemberHandler) UpdateConversationAllMuted(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) UpdateConversationReview(c *gin.Context) {
@@ -223,7 +224,7 @@ func (h *MemberHandler) UpdateConversationReview(c *gin.Context) {
 		Enabled bool `json:"enabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -239,7 +240,7 @@ func (h *MemberHandler) UpdateConversationReview(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) UpdateMemberMic(c *gin.Context) {
@@ -247,7 +248,7 @@ func (h *MemberHandler) UpdateMemberMic(c *gin.Context) {
 		MicStatus string `json:"mic_status" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -264,7 +265,7 @@ func (h *MemberHandler) UpdateMemberMic(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.OK(c, nil)
 }
 
 func (h *MemberHandler) writeMemberError(c *gin.Context, err error) {
@@ -304,5 +305,5 @@ func (h *MemberHandler) writeMemberError(c *gin.Context, err error) {
 		status = http.StatusBadRequest
 	}
 
-	c.JSON(status, gin.H{"error": err.Error()})
+	response.Error(c, status, err.Error())
 }

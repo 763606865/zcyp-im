@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"zcyp-im/internal/auth"
+	"zcyp-im/internal/response"
 )
 
 const authClaimsKey = "auth_claims"
@@ -15,14 +16,14 @@ func AuthMiddleware(tokenService *auth.TokenService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing bearer token"})
+			response.AbortError(c, http.StatusUnauthorized, "missing bearer token")
 			return
 		}
 
 		tokenString := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
 		claims, err := tokenService.Parse(tokenString)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			response.AbortError(c, http.StatusUnauthorized, "invalid token")
 			return
 		}
 

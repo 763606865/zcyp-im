@@ -5,14 +5,16 @@
 Current scope:
 
 - `admin` API for application provisioning
-- `im` API for token issuing and connection entry
-- config-driven HTTP bootstrap
+- `im` API for token issuing and message/member operations
+- dedicated WebSocket gateway for long connections
+- config-driven API and WebSocket bootstrap
 - repository abstraction with in-memory and MySQL implementations
 
 Run:
 
 ```bash
 make run
+make run-ws
 ```
 
 Default routes:
@@ -26,7 +28,6 @@ Default routes:
 - `GET /admin/apps/:app_code/users/:external_user_id`
 - `PATCH /admin/apps/:app_code/users/:external_user_id/status`
 - `POST /im/auth/token`
-- `GET /im/connect`
 - `POST /im/conversations`
 - `POST /im/conversations/:conversation_no/messages`
 - `GET /im/conversations/:conversation_no/messages`
@@ -50,11 +51,11 @@ Auth flow:
 - disable or re-enable user with `PATCH /admin/apps/:app_code/users/:external_user_id/status`
 - exchange token with `POST /im/auth/token` using `app_code + app_key + user_id`
 - call IM HTTP APIs with `Authorization: Bearer <token>`
-- connect WebSocket with `GET /im/connect?token=<token>`
+- connect WebSocket with `GET ws://<ws-host>:<ws-port>/im/connect?token=<token>`
 
 WebSocket:
 
-- connect with `GET /im/connect?token=...`
+- connect with `GET /im/connect?token=...` on the WebSocket gateway
 - client message `{"action":"subscribe","conversation_no":"conv_xxx"}`
 - client message `{"action":"send_message","conversation_no":"conv_xxx","message_type":"text","content":"hello"}`
 - server event `{"action":"message","conversation_no":"conv_xxx","message":{...}}`
@@ -88,7 +89,11 @@ MySQL config:
 - defaults live in `configs/config.yaml`
 - environment variables override config, for example `ZCYP_IM_MYSQL_PASSWORD`
 - the app auto-loads `.env` and `.env.local` on startup
+- copy `.env.example` to `.env` for local setup
 - keep real secrets in `.env`, do not commit them
+- API default listen address: `0.0.0.0:9011`
+- WebSocket default listen address: `0.0.0.0:9012`
+- WebSocket config can also be overridden with `ZCYP_IM_WEBSOCKET_HOST` and `ZCYP_IM_WEBSOCKET_PORT`
 
 Migration files:
 
@@ -122,9 +127,17 @@ migrate -path migrations -database "mysql://root:password@tcp(127.0.0.1:3306)/zc
 Common commands:
 
 ```bash
+make run-api
+make run-ws
 make test
 make build
 make migrate-up
 make migrate-down
 make migrate-force VERSION=1
 ```
+
+Docs:
+
+- [docs/接口总览.md](./docs/接口总览.md)
+- [docs/WebSocket.md](./docs/WebSocket.md)
+- [docs/nginx.md](./docs/nginx.md)

@@ -1,107 +1,83 @@
 package app
 
 import (
-	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/gin-gonic/gin"
 
 	"zcyp-im/internal/auth"
-	"zcyp-im/internal/config"
 	adminhandler "zcyp-im/internal/handler/admin"
 	imhandler "zcyp-im/internal/handler/im"
-	"zcyp-im/internal/repository"
-	memoryrepo "zcyp-im/internal/repository/memory"
-	mysqlrepo "zcyp-im/internal/repository/mysql"
-	"zcyp-im/internal/service"
-	mysqlstore "zcyp-im/internal/store/mysql"
-	wsgateway "zcyp-im/internal/ws"
+	"zcyp-im/internal/response"
 )
 
 type Server struct {
-	engine *gin.Engine
-	config config.Config
-	db     *sql.DB
+	engine    *gin.Engine
+	bootstrap *Bootstrap
+	host      string
+	port      int
 }
 
 func NewServer() (*Server, error) {
-	cfg, err := config.Load()
+	bootstrap, err := NewBootstrap()
 	if err != nil {
 		return nil, err
 	}
 
 	engine := gin.Default()
+	_ = engine.SetTrustedProxies(nil)
+	engine.Use(response.Middleware())
+	registerAPIRoutes(
+		engine,
+		bootstrap.TokenService,
+		bootstrap.AdminHandler,
+		bootstrap.UserHandler,
+		bootstrap.Connection,
+		bootstrap.MessageHandler,
+		bootstrap.MemberHandler,
+	)
 
-	stores, db, err := buildRepositories(cfg)
+	return &Server{
+		engine:    engine,
+		bootstrap: bootstrap,
+		host:      bootstrap.Config.HTTP.Host,
+		port:      bootstrap.Config.HTTP.Port,
+	}, nil
+}
+
+func NewWebSocketServer() (*Server, error) {
+	bootstrap, err := NewBootstrap()
 	if err != nil {
 		return nil, err
 	}
 
-	appService := service.NewAppService(stores.appRepo)
-	userService := service.NewUserService(appService, stores.userRepo)
-	tokenService := auth.NewTokenService(cfg.JWT)
-	imService := service.NewIMService(appService, userService, stores.conversationRepo, stores.memberRepo, stores.messageRepo, cfg.Moderation.BlockedWords)
-	hub := wsgateway.NewHub(imService)
-	adminHandler := adminhandler.NewAppHandler(appService)
-	userHandler := adminhandler.NewUserHandler(userService)
-	imHandler := imhandler.NewConnectionHandler(appService, userService, tokenService, hub)
-	messageHandler := imhandler.NewMessageHandler(imService, hub)
-	memberHandler := imhandler.NewMemberHandler(imService)
-
-	registerRoutes(engine, tokenService, adminHandler, userHandler, imHandler, messageHandler, memberHandler)
+	engine := gin.Default()
+	_ = engine.SetTrustedProxies(nil)
+	engine.Use(response.Middleware())
+	registerWebSocketRoutes(engine, bootstrap.Connection)
 
 	return &Server{
-		engine: engine,
-		config: cfg,
-		db:     db,
+		engine:    engine,
+		bootstrap: bootstrap,
+		host:      bootstrap.Config.WebSocket.Host,
+		port:      bootstrap.Config.WebSocket.Port,
 	}, nil
 }
 
 func (s *Server) Run() error {
 	defer func() {
-		if s.db != nil {
-			_ = s.db.Close()
+		if s.bootstrap.DB != nil {
+			_ = s.bootstrap.DB.Close()
 		}
 	}()
 
-	addr := fmt.Sprintf("%s:%d", s.config.HTTP.Host, s.config.HTTP.Port)
+	addr := fmt.Sprintf("%s:%d", s.host, s.port)
+	log.Printf("server: listen addr=%s", addr)
 	return s.engine.Run(addr)
 }
 
-type repositories struct {
-	appRepo          repository.AppRepository
-	userRepo         repository.UserRepository
-	conversationRepo repository.ConversationRepository
-	memberRepo       repository.ConversationMemberRepository
-	messageRepo      repository.MessageRepository
-}
-
-func buildRepositories(cfg config.Config) (repositories, *sql.DB, error) {
-	if !cfg.MySQL.Enabled {
-		return repositories{
-			appRepo:          memoryrepo.NewAppRepository(),
-			userRepo:         memoryrepo.NewUserRepository(),
-			conversationRepo: memoryrepo.NewConversationRepository(),
-			memberRepo:       memoryrepo.NewConversationMemberRepository(),
-			messageRepo:      memoryrepo.NewMessageRepository(),
-		}, nil, nil
-	}
-
-	db, err := mysqlstore.New(cfg.MySQL)
-	if err != nil {
-		return repositories{}, nil, err
-	}
-
-	return repositories{
-		appRepo:          mysqlrepo.NewAppRepository(db),
-		userRepo:         mysqlrepo.NewUserRepository(db),
-		conversationRepo: mysqlrepo.NewConversationRepository(db),
-		memberRepo:       mysqlrepo.NewConversationMemberRepository(db),
-		messageRepo:      mysqlrepo.NewMessageRepository(db),
-	}, db, nil
-}
-
-func registerRoutes(
+func registerAPIRoutes(
 	engine *gin.Engine,
 	tokenService *auth.TokenService,
 	adminHandler *adminhandler.AppHandler,
@@ -111,9 +87,9 @@ func registerRoutes(
 	memberHandler *imhandler.MemberHandler,
 ) {
 	engine.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		response.OK(c, gin.H{
 			"status":  "ok",
-			"service": "zcyp-im",
+			"service": "zcyp-im-api",
 		})
 	})
 
@@ -131,7 +107,6 @@ func registerRoutes(
 	im := engine.Group("/im")
 	{
 		im.POST("/auth/token", imHandler.IssueAccessToken)
-		im.GET("/connect", imHandler.Connect)
 	}
 
 	imAuthorized := engine.Group("/im")
@@ -154,4 +129,15 @@ func registerRoutes(
 		imAuthorized.POST("/conversations/:conversation_no/members/:member_user_id/mute", memberHandler.MuteMember)
 		imAuthorized.POST("/conversations/:conversation_no/members/:member_user_id/unmute", memberHandler.UnmuteMember)
 	}
+}
+
+func registerWebSocketRoutes(engine *gin.Engine, imHandler *imhandler.ConnectionHandler) {
+	engine.GET("/health", func(c *gin.Context) {
+		response.OK(c, gin.H{
+			"status":  "ok",
+			"service": "zcyp-im-ws",
+		})
+	})
+
+	engine.GET("/im/connect", imHandler.Connect)
 }

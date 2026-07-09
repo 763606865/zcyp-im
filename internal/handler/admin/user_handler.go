@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"zcyp-im/internal/response"
 	"zcyp-im/internal/service"
 )
 
@@ -21,7 +22,7 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 func (h *UserHandler) UpsertUser(c *gin.Context) {
 	var input service.UpsertUserInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -32,7 +33,7 @@ func (h *UserHandler) UpsertUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	response.OK(c, user)
 }
 
 func (h *UserHandler) GetUser(c *gin.Context) {
@@ -42,7 +43,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	response.OK(c, user)
 }
 
 func (h *UserHandler) ListUsers(c *gin.Context) {
@@ -50,7 +51,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	if value := c.DefaultQuery("limit", "50"); value != "" {
 		parsed, err := strconv.Atoi(value)
 		if err != nil || parsed <= 0 || parsed > 200 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "limit must be between 1 and 200"})
+			response.Error(c, http.StatusBadRequest, "limit must be between 1 and 200")
 			return
 		}
 		limit = parsed
@@ -62,13 +63,13 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"items": items})
+	response.OK(c, gin.H{"items": items})
 }
 
 func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
 	var input service.UpdateUserStatusInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -81,7 +82,7 @@ func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	response.OK(c, user)
 }
 
 func (h *UserHandler) writeUserError(c *gin.Context, err error) {
@@ -97,5 +98,5 @@ func (h *UserHandler) writeUserError(c *gin.Context, err error) {
 		status = http.StatusBadRequest
 	}
 
-	c.JSON(status, gin.H{"error": err.Error()})
+	response.Error(c, status, err.Error())
 }

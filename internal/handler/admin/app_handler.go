@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"zcyp-im/internal/response"
 	"zcyp-im/internal/service"
 )
 
@@ -20,35 +21,27 @@ func NewAppHandler(appService *service.AppService) *AppHandler {
 func (h *AppHandler) ListApps(c *gin.Context) {
 	items, err := h.appService.ListApps()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"items": items,
-	})
+	response.OK(c, items)
 }
 
 func (h *AppHandler) CreateApp(c *gin.Context) {
 	var input service.CreateAppInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	app, err := h.appService.CreateApp(input)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, app)
+	response.Created(c, app)
 }
 
 func (h *AppHandler) GetApp(c *gin.Context) {
@@ -59,11 +52,9 @@ func (h *AppHandler) GetApp(c *gin.Context) {
 			status = http.StatusNotFound
 		}
 
-		c.JSON(status, gin.H{
-			"error": err.Error(),
-		})
+		response.Error(c, status, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, app)
+	response.OK(c, app)
 }

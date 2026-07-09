@@ -13,6 +13,9 @@ import (
 )
 
 const writeTimeout = 5 * time.Second
+const pingInterval = 30 * time.Second
+const pingTimeout = 10 * time.Second
+const maxMessageBytes = 64 * 1024
 
 type Hub struct {
 	imService *service.IMService
@@ -56,6 +59,8 @@ func NewHub(imService *service.IMService) *Hub {
 }
 
 func (h *Hub) Register(conn *websocket.Conn, appCode, userID string) *Client {
+	conn.SetReadLimit(maxMessageBytes)
+
 	client := &Client{
 		hub:           h,
 		conn:          conn,
@@ -123,10 +128,14 @@ func (h *Hub) BroadcastMessage(conversationNo string, message model.Message) {
 }
 
 func (c *Client) Serve(ctx context.Context) {
+	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
+		cancel()
 		c.hub.Unregister(c)
 		_ = c.conn.Close(websocket.StatusNormalClosure, "bye")
 	}()
+
+	go c.pingLoop(ctx, cancel)
 
 	for {
 		_, data, err := c.conn.Read(ctx)
@@ -178,6 +187,26 @@ func (c *Client) Serve(ctx context.Context) {
 			c.hub.BroadcastMessage(msg.ConversationNo, message)
 		default:
 			_ = c.WriteJSON(outboundMessage{Action: "error", Error: "unsupported action"})
+		}
+	}
+}
+
+func (c *Client) pingLoop(ctx context.Context, cancel context.CancelFunc) {
+	ticker := time.NewTicker(pingInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			pingCtx, pingCancel := context.WithTimeout(ctx, pingTimeout)
+			err := c.conn.Ping(pingCtx)
+			pingCancel()
+			if err != nil {
+				cancel()
+				return
+			}
 		}
 	}
 }

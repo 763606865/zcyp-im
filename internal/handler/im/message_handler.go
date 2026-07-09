@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"zcyp-im/internal/model"
+	"zcyp-im/internal/response"
 	"zcyp-im/internal/service"
 )
 
@@ -27,7 +28,7 @@ func NewMessageHandler(imService *service.IMService, broadcaster broadcaster) *M
 func (h *MessageHandler) CreateConversation(c *gin.Context) {
 	var req service.CreateConversationInput
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -41,13 +42,13 @@ func (h *MessageHandler) CreateConversation(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, conversation)
+	response.Created(c, conversation)
 }
 
 func (h *MessageHandler) SendMessage(c *gin.Context) {
 	var req service.SendMessageInput
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -66,7 +67,7 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 		h.broadcaster.BroadcastMessage(req.ConversationNo, message)
 	}
 
-	c.JSON(http.StatusCreated, message)
+	response.Created(c, message)
 }
 
 func (h *MessageHandler) ListMessages(c *gin.Context) {
@@ -74,7 +75,7 @@ func (h *MessageHandler) ListMessages(c *gin.Context) {
 	if value := c.DefaultQuery("limit", "50"); value != "" {
 		parsed, err := strconv.Atoi(value)
 		if err != nil || parsed <= 0 || parsed > 200 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "limit must be between 1 and 200"})
+			response.Error(c, http.StatusBadRequest, "limit must be between 1 and 200")
 			return
 		}
 		limit = parsed
@@ -91,7 +92,7 @@ func (h *MessageHandler) ListMessages(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"items": items})
+	response.OK(c, gin.H{"items": items})
 }
 
 func (h *MessageHandler) writeIMError(c *gin.Context, err error) {
@@ -129,5 +130,5 @@ func (h *MessageHandler) writeIMError(c *gin.Context, err error) {
 		status = http.StatusForbidden
 	}
 
-	c.JSON(status, gin.H{"error": err.Error()})
+	response.Error(c, status, err.Error())
 }

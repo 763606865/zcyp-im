@@ -16,28 +16,47 @@ MYSQL_PASSWORD ?= $(ZCYP_IM_MYSQL_PASSWORD)
 MIGRATE ?= migrate
 MYSQL_DSN := mysql://$(MYSQL_USERNAME):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOST):$(MYSQL_PORT))/$(MYSQL_DATABASE)
 
-.PHONY: help run test build migrate-up migrate-down migrate-force
+.PHONY: help run run-api run-ws test build build-api build-ws migrate-up migrate-down migrate-force
 
 help:
 	@echo "Available targets:"
-	@echo "  make run           Start the application"
+	@echo "  make run           Start the API service"
+	@echo "  make run-api       Start the API service"
+	@echo "  make run-ws        Start the WebSocket gateway"
 	@echo "  make test          Run go test"
-	@echo "  make build         Build the binary"
+	@echo "  make build         Build both binaries"
+	@echo "  make build-api     Build the API binary"
+	@echo "  make build-ws      Build the WebSocket binary"
 	@echo "  make migrate-up    Apply all up migrations"
 	@echo "  make migrate-down  Roll back one migration"
 	@echo "  make migrate-force VERSION=<n>  Force migration version"
 
 run:
+	@$(MAKE) run-api
+
+run-api:
 	@mkdir -p $(GOCACHE_DIR)
 	GOCACHE=$(GOCACHE_DIR) go run .
+
+run-ws:
+	@mkdir -p $(GOCACHE_DIR)
+	GOCACHE=$(GOCACHE_DIR) go run ./cmd/ws-gateway
 
 test:
 	@mkdir -p $(GOCACHE_DIR)
 	GOCACHE=$(GOCACHE_DIR) go test ./...
 
 build:
+	@$(MAKE) build-api
+	@$(MAKE) build-ws
+
+build-api:
 	@mkdir -p $(GOCACHE_DIR)
 	GOCACHE=$(GOCACHE_DIR) go build -o $(APP_NAME) .
+
+build-ws:
+	@mkdir -p $(GOCACHE_DIR)
+	GOCACHE=$(GOCACHE_DIR) go build -o $(APP_NAME)-ws ./cmd/ws-gateway
 
 migrate-up:
 	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(MYSQL_DSN)" up
