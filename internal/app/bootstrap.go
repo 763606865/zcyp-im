@@ -19,6 +19,8 @@ import (
 type Bootstrap struct {
 	Config         config.Config
 	DB             *sql.DB
+	AppService     *service.AppService
+	UserService    *service.UserService
 	TokenService   *auth.TokenService
 	AdminHandler   *adminhandler.AppHandler
 	UserHandler    *adminhandler.UserHandler
@@ -53,6 +55,8 @@ func NewBootstrap() (*Bootstrap, error) {
 	return &Bootstrap{
 		Config:         cfg,
 		DB:             db,
+		AppService:     appService,
+		UserService:    userService,
 		TokenService:   tokenService,
 		AdminHandler:   adminhandler.NewAppHandler(appService),
 		UserHandler:    adminhandler.NewUserHandler(userService),

@@ -8,8 +8,10 @@ import (
 
 	"zcyp-im/internal/auth"
 	adminhandler "zcyp-im/internal/handler/admin"
+	apihandler "zcyp-im/internal/handler/api"
 	imhandler "zcyp-im/internal/handler/im"
 	"zcyp-im/internal/response"
+	"zcyp-im/internal/service"
 )
 
 type Server struct {
@@ -30,6 +32,8 @@ func NewServer() (*Server, error) {
 	engine.Use(response.Middleware())
 	registerAPIRoutes(
 		engine,
+		bootstrap.AppService,
+		bootstrap.UserService,
 		bootstrap.TokenService,
 		bootstrap.AdminHandler,
 		bootstrap.UserHandler,
@@ -79,6 +83,8 @@ func (s *Server) Run() error {
 
 func registerAPIRoutes(
 	engine *gin.Engine,
+	appService *service.AppService,
+	userService *service.UserService,
 	tokenService *auth.TokenService,
 	adminHandler *adminhandler.AppHandler,
 	userHandler *adminhandler.UserHandler,
@@ -102,6 +108,16 @@ func registerAPIRoutes(
 		admin.POST("/apps/:app_code/users", userHandler.UpsertUser)
 		admin.GET("/apps/:app_code/users/:external_user_id", userHandler.GetUser)
 		admin.PATCH("/apps/:app_code/users/:external_user_id/status", userHandler.UpdateUserStatus)
+	}
+
+	apiUserHandler := apihandler.NewUserHandler(userService, tokenService)
+	api := engine.Group("/api")
+	api.Use(apihandler.AppAuthMiddleware(appService))
+	{
+		api.POST("/users", apiUserHandler.UpsertUser)
+		api.GET("/users/:external_user_id", apiUserHandler.GetUser)
+		api.PUT("/users/:external_user_id", apiUserHandler.UpdateUser)
+		api.POST("/users/:external_user_id/token", apiUserHandler.IssueAccessToken)
 	}
 
 	im := engine.Group("/im")

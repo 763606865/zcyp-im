@@ -24,6 +24,13 @@ type UpdateUserStatusInput struct {
 	Status         string `json:"status" binding:"required"`
 }
 
+type UpdateUserProfileInput struct {
+	AppCode        string  `json:"app_code"`
+	ExternalUserID string  `json:"external_user_id"`
+	Nickname       *string `json:"nickname"`
+	AvatarURL      *string `json:"avatar_url"`
+}
+
 type UserService struct {
 	appService *AppService
 	repo       repository.UserRepository
@@ -105,5 +112,30 @@ func (s *UserService) UpdateUserStatus(input UpdateUserStatusInput) (model.User,
 		Nickname:       user.Nickname,
 		AvatarURL:      user.AvatarURL,
 		Status:         input.Status,
+	})
+}
+
+func (s *UserService) UpdateUserProfile(input UpdateUserProfileInput) (model.User, error) {
+	user, err := s.GetUser(input.AppCode, input.ExternalUserID)
+	if err != nil {
+		return model.User{}, err
+	}
+
+	nickname := user.Nickname
+	if input.Nickname != nil {
+		nickname = *input.Nickname
+	}
+
+	avatarURL := user.AvatarURL
+	if input.AvatarURL != nil {
+		avatarURL = *input.AvatarURL
+	}
+
+	return s.repo.Upsert(repository.UpsertUserParams{
+		AppID:          user.AppID,
+		ExternalUserID: user.ExternalUserID,
+		Nickname:       nickname,
+		AvatarURL:      avatarURL,
+		Status:         user.Status,
 	})
 }

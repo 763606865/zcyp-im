@@ -20,6 +20,10 @@ make run-ws
 Default routes:
 
 - `GET /health`
+- `POST /api/users`
+- `GET /api/users/:external_user_id`
+- `PUT /api/users/:external_user_id`
+- `POST /api/users/:external_user_id/token`
 - `GET /admin/apps`
 - `POST /admin/apps`
 - `GET /admin/apps/:app_code`
@@ -47,11 +51,18 @@ Default routes:
 
 Auth flow:
 
-- create or update user first with `POST /admin/apps/:app_code/users`
+- business-side create or update user with `POST /api/users`
+- business-side issue user token with `POST /api/users/:external_user_id/token`
+- admin-side create or update user with `POST /admin/apps/:app_code/users`
 - disable or re-enable user with `PATCH /admin/apps/:app_code/users/:external_user_id/status`
 - exchange token with `POST /im/auth/token` using `app_code + app_key + user_id`
 - call IM HTTP APIs with `Authorization: Bearer <token>`
 - connect WebSocket with `GET ws://<ws-host>:<ws-port>/im/connect?token=<token>`
+
+Business API auth:
+
+- `/api/*` uses `X-App-Code` and `X-App-Key` headers
+- these endpoints are intended for product business servers, not direct public clients
 
 WebSocket:
 
