@@ -7,6 +7,7 @@ import (
 	"zcyp-im/internal/auth"
 	"zcyp-im/internal/config"
 	adminhandler "zcyp-im/internal/handler/admin"
+	apihandler "zcyp-im/internal/handler/api"
 	imhandler "zcyp-im/internal/handler/im"
 	"zcyp-im/internal/repository"
 	memoryrepo "zcyp-im/internal/repository/memory"
@@ -17,16 +18,19 @@ import (
 )
 
 type Bootstrap struct {
-	Config         config.Config
-	DB             *sql.DB
-	AppService     *service.AppService
-	UserService    *service.UserService
-	TokenService   *auth.TokenService
-	AdminHandler   *adminhandler.AppHandler
-	UserHandler    *adminhandler.UserHandler
-	Connection     *imhandler.ConnectionHandler
-	MessageHandler *imhandler.MessageHandler
-	MemberHandler  *imhandler.MemberHandler
+	Config          config.Config
+	DB              *sql.DB
+	AppService      *service.AppService
+	UserService     *service.UserService
+	TokenService    *auth.TokenService
+	AdminHandler    *adminhandler.AppHandler
+	UserHandler     *adminhandler.UserHandler
+	APIConversation *apihandler.ConversationHandler
+	APIMember       *apihandler.MemberHandler
+	APIMessage      *apihandler.MessageHandler
+	Connection      *imhandler.ConnectionHandler
+	MessageHandler  *imhandler.MessageHandler
+	MemberHandler   *imhandler.MemberHandler
 }
 
 func NewBootstrap() (*Bootstrap, error) {
@@ -53,16 +57,19 @@ func NewBootstrap() (*Bootstrap, error) {
 	hub := wsgateway.NewHub(imService)
 
 	return &Bootstrap{
-		Config:         cfg,
-		DB:             db,
-		AppService:     appService,
-		UserService:    userService,
-		TokenService:   tokenService,
-		AdminHandler:   adminhandler.NewAppHandler(appService),
-		UserHandler:    adminhandler.NewUserHandler(userService),
-		Connection:     imhandler.NewConnectionHandler(appService, userService, tokenService, hub),
-		MessageHandler: imhandler.NewMessageHandler(imService, hub),
-		MemberHandler:  imhandler.NewMemberHandler(imService),
+		Config:          cfg,
+		DB:              db,
+		AppService:      appService,
+		UserService:     userService,
+		TokenService:    tokenService,
+		AdminHandler:    adminhandler.NewAppHandler(appService),
+		UserHandler:     adminhandler.NewUserHandler(userService),
+		APIConversation: apihandler.NewConversationHandler(imService),
+		APIMember:       apihandler.NewMemberHandler(imService),
+		APIMessage:      apihandler.NewMessageHandler(imService, hub),
+		Connection:      imhandler.NewConnectionHandler(appService, userService, tokenService, hub),
+		MessageHandler:  imhandler.NewMessageHandler(imService, hub),
+		MemberHandler:   imhandler.NewMemberHandler(imService),
 	}, nil
 }
 

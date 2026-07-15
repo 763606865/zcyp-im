@@ -37,6 +37,9 @@ func NewServer() (*Server, error) {
 		bootstrap.TokenService,
 		bootstrap.AdminHandler,
 		bootstrap.UserHandler,
+		bootstrap.APIConversation,
+		bootstrap.APIMember,
+		bootstrap.APIMessage,
 		bootstrap.Connection,
 		bootstrap.MessageHandler,
 		bootstrap.MemberHandler,
@@ -88,6 +91,9 @@ func registerAPIRoutes(
 	tokenService *auth.TokenService,
 	adminHandler *adminhandler.AppHandler,
 	userHandler *adminhandler.UserHandler,
+	apiConversationHandler *apihandler.ConversationHandler,
+	apiMemberHandler *apihandler.MemberHandler,
+	apiMessageHandler *apihandler.MessageHandler,
 	imHandler *imhandler.ConnectionHandler,
 	messageHandler *imhandler.MessageHandler,
 	memberHandler *imhandler.MemberHandler,
@@ -118,6 +124,20 @@ func registerAPIRoutes(
 		api.GET("/users/:external_user_id", apiUserHandler.GetUser)
 		api.PUT("/users/:external_user_id", apiUserHandler.UpdateUser)
 		api.POST("/users/:external_user_id/token", apiUserHandler.IssueAccessToken)
+		api.POST("/conversations", apiConversationHandler.CreateConversation)
+		api.GET("/conversations/:conversation_no/messages", apiConversationHandler.ListMessages)
+		api.GET("/conversations/:conversation_no/members", apiConversationHandler.ListMembers)
+		api.POST("/conversations/:conversation_no/members", apiMemberHandler.AddMembers)
+		api.DELETE("/conversations/:conversation_no/members/:member_user_id", apiMemberHandler.RemoveMember)
+		api.POST("/conversations/:conversation_no/all-muted", apiMemberHandler.UpdateConversationAllMuted)
+		api.POST("/conversations/:conversation_no/review", apiMemberHandler.UpdateConversationReview)
+		api.POST("/conversations/:conversation_no/members/:member_user_id/ban", apiMemberHandler.BanMember)
+		api.POST("/conversations/:conversation_no/members/:member_user_id/unban", apiMemberHandler.UnbanMember)
+		api.POST("/conversations/:conversation_no/members/:member_user_id/role", apiMemberHandler.UpdateMemberRole)
+		api.POST("/conversations/:conversation_no/members/:member_user_id/mic", apiMemberHandler.UpdateMemberMic)
+		api.POST("/conversations/:conversation_no/members/:member_user_id/mute", apiMemberHandler.MuteMember)
+		api.POST("/conversations/:conversation_no/members/:member_user_id/unmute", apiMemberHandler.UnmuteMember)
+		api.POST("/conversations/:conversation_no/messages", apiMessageHandler.SendMessage)
 	}
 
 	im := engine.Group("/im")

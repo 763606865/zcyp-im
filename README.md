@@ -24,6 +24,20 @@ Default routes:
 - `GET /api/users/:external_user_id`
 - `PUT /api/users/:external_user_id`
 - `POST /api/users/:external_user_id/token`
+- `POST /api/conversations`
+- `GET /api/conversations/:conversation_no/messages`
+- `GET /api/conversations/:conversation_no/members`
+- `POST /api/conversations/:conversation_no/members`
+- `DELETE /api/conversations/:conversation_no/members/:member_user_id`
+- `POST /api/conversations/:conversation_no/all-muted`
+- `POST /api/conversations/:conversation_no/review`
+- `POST /api/conversations/:conversation_no/members/:member_user_id/ban`
+- `POST /api/conversations/:conversation_no/members/:member_user_id/unban`
+- `POST /api/conversations/:conversation_no/members/:member_user_id/role`
+- `POST /api/conversations/:conversation_no/members/:member_user_id/mic`
+- `POST /api/conversations/:conversation_no/members/:member_user_id/mute`
+- `POST /api/conversations/:conversation_no/members/:member_user_id/unmute`
+- `POST /api/conversations/:conversation_no/messages`
 - `GET /admin/apps`
 - `POST /admin/apps`
 - `GET /admin/apps/:app_code`
@@ -53,6 +67,12 @@ Auth flow:
 
 - business-side create or update user with `POST /api/users`
 - business-side issue user token with `POST /api/users/:external_user_id/token`
+- business-side create conversation with `POST /api/conversations`
+- business-side load history with `GET /api/conversations/:conversation_no/messages?user_id=...`
+- business-side load members with `GET /api/conversations/:conversation_no/members?user_id=...`
+- business-side manage members and conversation controls with `/api/conversations/*`
+- business-side send message with `POST /api/conversations/:conversation_no/messages`
+- business backend should persist `business key -> conversation_no` mapping and dedupe `single` conversations before create
 - admin-side create or update user with `POST /admin/apps/:app_code/users`
 - disable or re-enable user with `PATCH /admin/apps/:app_code/users/:external_user_id/status`
 - exchange token with `POST /im/auth/token` using `app_code + app_key + user_id`
