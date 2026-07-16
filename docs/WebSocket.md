@@ -33,7 +33,28 @@ GET ws://<ws-host>:<ws-port>/im/connect?token=<token>
   "conversation_no": "conv_xxxxxxxx",
   "message_type": "text",
   "client_msg_id": "client_001",
-  "content": "hello"
+  "content": {
+    "text": "hello"
+  }
+}
+```
+
+发送业务卡片消息示例：
+
+```json
+{
+  "action": "send_message",
+  "conversation_no": "conv_xxxxxxxx",
+  "message_type": "biz_card",
+  "client_msg_id": "client_002",
+  "content": {
+    "card_type": "interview_invitation",
+    "title": "面试邀请",
+    "summary": "你收到一条新的面试邀请",
+    "status": "scheduled",
+    "action_url": "/recruit/interviews/67890",
+    "biz_id": "interview_67890"
+  }
 }
 ```
 

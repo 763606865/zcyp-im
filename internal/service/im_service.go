@@ -25,20 +25,21 @@ var ErrConversationMicStatusInvalid = errors.New("conversation mic status invali
 var ErrConversationReviewRejected = errors.New("conversation review rejected")
 
 type CreateConversationInput struct {
-	AppCode       string   `json:"app_code" binding:"required"`
-	Type          string   `json:"type" binding:"required"`
-	Subject       string   `json:"subject"`
-	OwnerUserID   string   `json:"owner_user_id"`
-	MemberUserIDs []string `json:"member_user_ids"`
+	AppCode         string   `json:"app_code" binding:"required"`
+	ConversationKey string   `json:"conversation_key"`
+	Type            string   `json:"type" binding:"required"`
+	Subject         string   `json:"subject"`
+	OwnerUserID     string   `json:"owner_user_id"`
+	MemberUserIDs   []string `json:"member_user_ids"`
 }
 
 type SendMessageInput struct {
-	AppCode        string `json:"app_code" binding:"required"`
-	ConversationNo string `json:"conversation_no" binding:"required"`
-	SenderUserID   string `json:"sender_user_id" binding:"required"`
-	MessageType    string `json:"message_type" binding:"required"`
-	ClientMsgID    string `json:"client_msg_id"`
-	Content        string `json:"content" binding:"required"`
+	AppCode        string          `json:"app_code" binding:"required"`
+	ConversationNo string          `json:"conversation_no" binding:"required"`
+	SenderUserID   string          `json:"sender_user_id" binding:"required"`
+	MessageType    string          `json:"message_type" binding:"required"`
+	ClientMsgID    string          `json:"client_msg_id"`
+	Content        json.RawMessage `json:"content" binding:"required"`
 }
 
 type AddConversationMembersInput struct {
@@ -142,6 +143,17 @@ func (s *IMService) CreateConversation(input CreateConversationInput) (model.Con
 		return model.Conversation{}, err
 	}
 
+	input.ConversationKey = strings.TrimSpace(input.ConversationKey)
+	if input.ConversationKey != "" {
+		conversation, err := s.conversationRepo.GetByKey(app.ID, input.ConversationKey)
+		if err == nil {
+			return conversation, nil
+		}
+		if !errors.Is(err, repository.ErrNotFound) {
+			return model.Conversation{}, err
+		}
+	}
+
 	if err := validateConversationType(input.Type, input.MemberUserIDs); err != nil {
 		return model.Conversation{}, err
 	}
@@ -156,11 +168,12 @@ func (s *IMService) CreateConversation(input CreateConversationInput) (model.Con
 	}
 
 	conversation, err := s.conversationRepo.Create(repository.CreateConversationParams{
-		ConversationNo: conversationNo,
-		AppID:          app.ID,
-		Type:           input.Type,
-		Subject:        input.Subject,
-		OwnerUserID:    input.OwnerUserID,
+		ConversationNo:  conversationNo,
+		ConversationKey: input.ConversationKey,
+		AppID:           app.ID,
+		Type:            input.Type,
+		Subject:         input.Subject,
+		OwnerUserID:     input.OwnerUserID,
 	})
 	if err != nil {
 		return model.Conversation{}, err
@@ -531,11 +544,23 @@ func (s *IMService) resolveConversation(appCode, conversationNo string) (model.A
 	return app, conversation, nil
 }
 
-func buildMessageContent(messageType, content string) (json.RawMessage, error) {
-	payload := map[string]string{
-		"type": messageType,
-		"text": content,
+func buildMessageContent(messageType string, content json.RawMessage) (json.RawMessage, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(content, &payload); err != nil {
+		return nil, err
 	}
+	if payload == nil {
+		return nil, errors.New("content must be a json object")
+	}
+
+	if strings.ToLower(messageType) == "text" {
+		text, ok := payload["text"].(string)
+		if !ok || strings.TrimSpace(text) == "" {
+			return nil, errors.New("text message content.text is required")
+		}
+	}
+
+	payload["type"] = messageType
 
 	raw, err := json.Marshal(payload)
 	if err != nil {
@@ -683,8 +708,8 @@ func validateMemberRole(conversationType, role string) error {
 	return ErrConversationRoleInvalid
 }
 
-func (s *IMService) reviewContent(content string) error {
-	lower := strings.ToLower(content)
+func (s *IMService) reviewContent(content json.RawMessage) error {
+	lower := strings.ToLower(string(content))
 	for _, blockedWord := range s.blockedWords {
 		word := strings.TrimSpace(strings.ToLower(blockedWord))
 		if word == "" {

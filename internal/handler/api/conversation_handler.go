@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -15,10 +16,15 @@ type ConversationHandler struct {
 }
 
 type createConversationRequest struct {
-	Type          string   `json:"type" binding:"required"`
-	Subject       string   `json:"subject"`
-	OwnerUserID   string   `json:"owner_user_id" binding:"required"`
-	MemberUserIDs []string `json:"member_user_ids"`
+	ConversationKey string   `json:"conversation_key"`
+	Type            string   `json:"type" binding:"required"`
+	Subject         string   `json:"subject"`
+	OwnerUserID     string   `json:"owner_user_id" binding:"required"`
+	MemberUserIDs   []string `json:"member_user_ids"`
+	Metadata        struct {
+		ConversationKey string  `json:"conversation_key"`
+		IdentityIDs     []int64 `json:"identity_ids"`
+	} `json:"metadata"`
 }
 
 func NewConversationHandler(imService *service.IMService) *ConversationHandler {
@@ -31,14 +37,19 @@ func (h *ConversationHandler) CreateConversation(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	conversationKey := strings.TrimSpace(req.ConversationKey)
+	if conversationKey == "" {
+		conversationKey = strings.TrimSpace(req.Metadata.ConversationKey)
+	}
 
 	app := mustApp(c)
 	conversation, err := h.imService.CreateConversation(service.CreateConversationInput{
-		AppCode:       app.AppCode,
-		Type:          req.Type,
-		Subject:       req.Subject,
-		OwnerUserID:   req.OwnerUserID,
-		MemberUserIDs: req.MemberUserIDs,
+		AppCode:         app.AppCode,
+		ConversationKey: conversationKey,
+		Type:            req.Type,
+		Subject:         req.Subject,
+		OwnerUserID:     req.OwnerUserID,
+		MemberUserIDs:   req.MemberUserIDs,
 	})
 	if err != nil {
 		writeIMError(c, err)

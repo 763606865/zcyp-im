@@ -53,7 +53,7 @@ func TestConversationHandlerCreateConversation(t *testing.T) {
 	req := httptest.NewRequest(
 		http.MethodPost,
 		"/api/conversations",
-		strings.NewReader(`{"type":"group","subject":"项目群","owner_user_id":"u_1001","member_user_ids":["u_1002"]}`),
+		strings.NewReader(`{"conversation_key":"order:1001:service","type":"group","subject":"项目群","owner_user_id":"u_1001","member_user_ids":["u_1002"]}`),
 	)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-App-Code", app.AppCode)
@@ -79,8 +79,148 @@ func TestConversationHandlerCreateConversation(t *testing.T) {
 	if conversation.Type != "group" {
 		t.Fatalf("type = %q", conversation.Type)
 	}
+	if conversation.ConversationKey != "order:1001:service" {
+		t.Fatalf("conversation_key = %q", conversation.ConversationKey)
+	}
 	if conversation.OwnerUserID != "u_1001" {
 		t.Fatalf("owner_user_id = %q", conversation.OwnerUserID)
+	}
+}
+
+func TestConversationHandlerCreateConversationReusesConversationKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	appService := service.NewAppService(memory.NewAppRepository())
+	userService := service.NewUserService(appService, memory.NewUserRepository())
+	imService := service.NewIMService(
+		appService,
+		userService,
+		memory.NewConversationRepository(),
+		memory.NewConversationMemberRepository(),
+		memory.NewMessageRepository(),
+		nil,
+	)
+
+	app, err := appService.CreateApp(service.CreateAppInput{Name: "test-app"})
+	if err != nil {
+		t.Fatalf("create app: %v", err)
+	}
+
+	for _, userID := range []string{"u_1001", "u_1002"} {
+		if _, err := userService.UpsertUser(service.UpsertUserInput{
+			AppCode:        app.AppCode,
+			ExternalUserID: userID,
+		}); err != nil {
+			t.Fatalf("upsert user %s: %v", userID, err)
+		}
+	}
+
+	handler := NewConversationHandler(imService)
+	engine := gin.New()
+	engine.Use(response.Middleware())
+	apiGroup := engine.Group("/api")
+	apiGroup.Use(AppAuthMiddleware(appService))
+	apiGroup.POST("/conversations", handler.CreateConversation)
+
+	body := `{"conversation_key":"single:u_1001:u_1002","type":"single","subject":"单聊","owner_user_id":"u_1001","member_user_ids":["u_1002"]}`
+	var first model.Conversation
+	for i := 0; i < 2; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/api/conversations", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-App-Code", app.AppCode)
+		req.Header.Set("X-App-Key", app.AppKey)
+
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, req)
+		if recorder.Code != http.StatusCreated {
+			t.Fatalf("request %d status = %d, body = %s", i, recorder.Code, recorder.Body.String())
+		}
+
+		var resp envelope
+		if err := json.Unmarshal(recorder.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("decode envelope: %v", err)
+		}
+
+		var conversation model.Conversation
+		if err := json.Unmarshal(resp.Data, &conversation); err != nil {
+			t.Fatalf("decode conversation: %v", err)
+		}
+
+		if i == 0 {
+			first = conversation
+			continue
+		}
+		if conversation.ConversationNo != first.ConversationNo {
+			t.Fatalf("conversation_no = %q, first = %q", conversation.ConversationNo, first.ConversationNo)
+		}
+		if conversation.ID != first.ID {
+			t.Fatalf("id = %d, first = %d", conversation.ID, first.ID)
+		}
+	}
+}
+
+func TestConversationHandlerCreateConversationUsesMetadataConversationKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	appService := service.NewAppService(memory.NewAppRepository())
+	userService := service.NewUserService(appService, memory.NewUserRepository())
+	imService := service.NewIMService(
+		appService,
+		userService,
+		memory.NewConversationRepository(),
+		memory.NewConversationMemberRepository(),
+		memory.NewMessageRepository(),
+		nil,
+	)
+
+	app, err := appService.CreateApp(service.CreateAppInput{Name: "test-app"})
+	if err != nil {
+		t.Fatalf("create app: %v", err)
+	}
+
+	for _, userID := range []string{"ROeNhrwyV9tK2qga76JOQxfp1neizSBo", "EfhxLZ9ck8reBm0UyPW6j1V2vblNd4tG"} {
+		if _, err := userService.UpsertUser(service.UpsertUserInput{
+			AppCode:        app.AppCode,
+			ExternalUserID: userID,
+		}); err != nil {
+			t.Fatalf("upsert user %s: %v", userID, err)
+		}
+	}
+
+	handler := NewConversationHandler(imService)
+	engine := gin.New()
+	engine.Use(response.Middleware())
+	apiGroup := engine.Group("/api")
+	apiGroup.Use(AppAuthMiddleware(appService))
+	apiGroup.POST("/conversations", handler.CreateConversation)
+
+	body := `{"type":"single","subject":null,"owner_user_id":"ROeNhrwyV9tK2qga76JOQxfp1neizSBo","metadata":{"conversation_key":"single:rc_user_im:3|rc_user_im:4","identity_ids":[18,3]},"member_user_ids":["EfhxLZ9ck8reBm0UyPW6j1V2vblNd4tG"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/conversations", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-App-Code", app.AppCode)
+	req.Header.Set("X-App-Key", app.AppKey)
+
+	recorder := httptest.NewRecorder()
+	engine.ServeHTTP(recorder, req)
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+
+	var resp envelope
+	if err := json.Unmarshal(recorder.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode envelope: %v", err)
+	}
+
+	var conversation model.Conversation
+	if err := json.Unmarshal(resp.Data, &conversation); err != nil {
+		t.Fatalf("decode conversation: %v", err)
+	}
+
+	if conversation.ConversationKey != "single:rc_user_im:3|rc_user_im:4" {
+		t.Fatalf("conversation_key = %q", conversation.ConversationKey)
+	}
+	if conversation.Type != "single" {
+		t.Fatalf("type = %q", conversation.Type)
 	}
 }
 
@@ -127,7 +267,7 @@ func TestConversationHandlerListMessagesAndMembers(t *testing.T) {
 		ConversationNo: conversation.ConversationNo,
 		SenderUserID:   "u_1001",
 		MessageType:    "text",
-		Content:        "hello",
+		Content:        json.RawMessage(`{"text":"hello"}`),
 	}); err != nil {
 		t.Fatalf("send message: %v", err)
 	}

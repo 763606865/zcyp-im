@@ -72,7 +72,7 @@ Auth flow:
 - business-side load members with `GET /api/conversations/:conversation_no/members?user_id=...`
 - business-side manage members and conversation controls with `/api/conversations/*`
 - business-side send message with `POST /api/conversations/:conversation_no/messages`
-- business backend should persist `business key -> conversation_no` mapping and dedupe `single` conversations before create
+- business backend should persist `business key -> conversation_no` mapping and pass stable `conversation_key` for idempotent create
 - admin-side create or update user with `POST /admin/apps/:app_code/users`
 - disable or re-enable user with `PATCH /admin/apps/:app_code/users/:external_user_id/status`
 - exchange token with `POST /im/auth/token` using `app_code + app_key + user_id`
@@ -88,7 +88,7 @@ WebSocket:
 
 - connect with `GET /im/connect?token=...` on the WebSocket gateway
 - client message `{"action":"subscribe","conversation_no":"conv_xxx"}`
-- client message `{"action":"send_message","conversation_no":"conv_xxx","message_type":"text","content":"hello"}`
+- client message `{"action":"send_message","conversation_no":"conv_xxx","message_type":"text","content":{"text":"hello"}}`
 - server event `{"action":"message","conversation_no":"conv_xxx","message":{...}}`
 
 Conversation:
@@ -138,6 +138,10 @@ Migration files:
 - `migrations/000004_member_moderation.down.sql`
 - `migrations/000005_conversation_controls.up.sql`
 - `migrations/000005_conversation_controls.down.sql`
+- `migrations/000006_expand_user_identifiers.up.sql`
+- `migrations/000006_expand_user_identifiers.down.sql`
+- `migrations/000007_conversation_key.up.sql`
+- `migrations/000007_conversation_key.down.sql`
 
 Manual bootstrap:
 
@@ -147,6 +151,8 @@ mysql -uroot -p zcyp_im < migrations/000002_conversation_members.up.sql
 mysql -uroot -p zcyp_im < migrations/000003_member_status.up.sql
 mysql -uroot -p zcyp_im < migrations/000004_member_moderation.up.sql
 mysql -uroot -p zcyp_im < migrations/000005_conversation_controls.up.sql
+mysql -uroot -p zcyp_im < migrations/000006_expand_user_identifiers.up.sql
+mysql -uroot -p zcyp_im < migrations/000007_conversation_key.up.sql
 ```
 
 Recommended migration tool:

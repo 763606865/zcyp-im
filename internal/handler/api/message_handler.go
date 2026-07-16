@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,10 +21,10 @@ type broadcaster interface {
 }
 
 type sendMessageRequest struct {
-	SenderUserID string `json:"sender_user_id" binding:"required"`
-	MessageType  string `json:"message_type" binding:"required"`
-	ClientMsgID  string `json:"client_msg_id"`
-	Content      string `json:"content" binding:"required"`
+	SenderUserID string          `json:"sender_user_id" binding:"required"`
+	MessageType  string          `json:"message_type" binding:"required"`
+	ClientMsgID  string          `json:"client_msg_id"`
+	Content      json.RawMessage `json:"content" binding:"required"`
 }
 
 func NewMessageHandler(imService *service.IMService, broadcaster broadcaster) *MessageHandler {

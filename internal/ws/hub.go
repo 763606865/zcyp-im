@@ -36,11 +36,11 @@ type Client struct {
 }
 
 type inboundMessage struct {
-	Action         string `json:"action"`
-	ConversationNo string `json:"conversation_no"`
-	MessageType    string `json:"message_type"`
-	ClientMsgID    string `json:"client_msg_id"`
-	Content        string `json:"content"`
+	Action         string          `json:"action"`
+	ConversationNo string          `json:"conversation_no"`
+	MessageType    string          `json:"message_type"`
+	ClientMsgID    string          `json:"client_msg_id"`
+	Content        json.RawMessage `json:"content"`
 }
 
 type outboundMessage struct {
@@ -161,7 +161,7 @@ func (c *Client) Serve(ctx context.Context) {
 			}
 			_ = c.WriteJSON(outboundMessage{Action: "subscribed", ConversationNo: msg.ConversationNo})
 		case "send_message":
-			if msg.ConversationNo == "" || msg.MessageType == "" || msg.Content == "" {
+			if msg.ConversationNo == "" || msg.MessageType == "" || len(msg.Content) == 0 {
 				_ = c.WriteJSON(outboundMessage{Action: "error", Error: "conversation_no, message_type and content are required"})
 				continue
 			}

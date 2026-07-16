@@ -3,11 +3,12 @@ package repository
 import "zcyp-im/internal/model"
 
 type CreateConversationParams struct {
-	ConversationNo string
-	AppID          uint64
-	Type           string
-	Subject        string
-	OwnerUserID    string
+	ConversationNo  string
+	ConversationKey string
+	AppID           uint64
+	Type            string
+	Subject         string
+	OwnerUserID     string
 }
 
 type UpdateConversationControlsParams struct {
@@ -19,5 +20,6 @@ type UpdateConversationControlsParams struct {
 type ConversationRepository interface {
 	Create(params CreateConversationParams) (model.Conversation, error)
 	GetByNo(conversationNo string) (model.Conversation, error)
+	GetByKey(appID uint64, conversationKey string) (model.Conversation, error)
 	UpdateControls(params UpdateConversationControlsParams) error
 }
