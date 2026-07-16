@@ -13,7 +13,7 @@ Current scope:
 Run:
 
 ```bash
-make run
+make run-api
 make run-ws
 ```
 
