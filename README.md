@@ -143,7 +143,7 @@ Migration files:
 - `migrations/000007_conversation_key.up.sql`
 - `migrations/000007_conversation_key.down.sql`
 
-Manual bootstrap:
+Manual bootstrap: 
 
 ```bash
 mysql -uroot -p zcyp_im < migrations/000001_init.up.sql
