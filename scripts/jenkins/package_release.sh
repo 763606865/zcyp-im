@@ -20,8 +20,8 @@ fi
 
 (cd "${ROOT_DIR}" && make build)
 
-cp "${ROOT_DIR}/zcyp-im" "${PACKAGE_DIR}/bin/"
-cp "${ROOT_DIR}/zcyp-im-ws" "${PACKAGE_DIR}/bin/"
+cp "${ROOT_DIR}/bin/zcyp-im" "${PACKAGE_DIR}/bin/"
+cp "${ROOT_DIR}/bin/zcyp-im-ws" "${PACKAGE_DIR}/bin/"
 cp -R "${ROOT_DIR}/configs/." "${PACKAGE_DIR}/configs/"
 cp -R "${ROOT_DIR}/migrations/." "${PACKAGE_DIR}/migrations/"
 cp "${ROOT_DIR}/.env.example" "${PACKAGE_DIR}/.env.example"

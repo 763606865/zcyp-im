@@ -51,12 +51,12 @@ build:
 	@$(MAKE) build-ws
 
 build-api:
-	@mkdir -p $(GOCACHE_DIR)
-	GOCACHE=$(GOCACHE_DIR) go build -o $(APP_NAME) .
+	@mkdir -p $(GOCACHE_DIR) bin
+	GOCACHE=$(GOCACHE_DIR) go build -o bin/$(APP_NAME) .
 
 build-ws:
-	@mkdir -p $(GOCACHE_DIR)
-	GOCACHE=$(GOCACHE_DIR) go build -o $(APP_NAME)-ws ./cmd/ws-gateway
+	@mkdir -p $(GOCACHE_DIR) bin
+	GOCACHE=$(GOCACHE_DIR) go build -o bin/$(APP_NAME)-ws ./cmd/ws-gateway
 
 migrate-up:
 	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(MYSQL_DSN)" up
