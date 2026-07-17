@@ -49,3 +49,6 @@ coverage.html
 
 # Generated files, if later used
 *.pb.go
+
+zcyp-im
+zcyp-im-ws
