@@ -90,6 +90,7 @@ WebSocket:
 - client message `{"action":"subscribe","conversation_no":"conv_xxx"}`
 - client message `{"action":"send_message","conversation_no":"conv_xxx","message_type":"text","content":{"text":"hello"}}`
 - server event `{"action":"message","conversation_no":"conv_xxx","message":{...}}`
+- API 与 WebSocket 网关独立运行时必须设置 `ZCYP_IM_REDIS_ENABLED=true`，两个进程使用相同的 Redis DB 和频道完成跨进程实时广播
 
 Conversation:
 
@@ -118,6 +119,14 @@ Conversation:
 MySQL config:
 
 - defaults live in `configs/config.yaml`
+
+Redis message bus config:
+
+- `ZCYP_IM_REDIS_ENABLED=true`
+- `ZCYP_IM_REDIS_ADDRESS=127.0.0.1:6379`
+- `ZCYP_IM_REDIS_PASSWORD=`
+- `ZCYP_IM_REDIS_DB=0`
+- `ZCYP_IM_REDIS_CHANNEL=zcyp-im:messages`
 - environment variables override config, for example `ZCYP_IM_MYSQL_PASSWORD`
 - the app auto-loads `.env` and `.env.local` on startup
 - copy `.env.example` to `.env` for local setup

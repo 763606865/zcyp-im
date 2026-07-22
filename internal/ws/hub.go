@@ -19,10 +19,15 @@ const maxMessageBytes = 64 * 1024
 
 type Hub struct {
 	imService *service.IMService
+	publisher messagePublisher
 
 	mu            sync.RWMutex
 	clients       map[*Client]struct{}
 	conversations map[string]map[*Client]struct{}
+}
+
+type messagePublisher interface {
+	BroadcastMessage(conversationNo string, message model.Message)
 }
 
 type Client struct {
@@ -33,6 +38,18 @@ type Client struct {
 
 	mu            sync.Mutex
 	subscriptions map[string]struct{}
+}
+
+func (h *Hub) SetPublisher(publisher messagePublisher) {
+	h.publisher = publisher
+}
+
+func (h *Hub) PublishMessage(conversationNo string, message model.Message) {
+	if h.publisher != nil {
+		h.publisher.BroadcastMessage(conversationNo, message)
+		return
+	}
+	h.BroadcastMessage(conversationNo, message)
 }
 
 type inboundMessage struct {
@@ -185,7 +202,7 @@ func (c *Client) Serve(ctx context.Context) {
 				continue
 			}
 
-			c.hub.BroadcastMessage(msg.ConversationNo, message)
+			c.hub.PublishMessage(msg.ConversationNo, message)
 		default:
 			_ = c.WriteJSON(outboundMessage{Action: "error", Error: "unsupported action"})
 		}

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -15,10 +16,11 @@ import (
 )
 
 type Server struct {
-	engine    *gin.Engine
-	bootstrap *Bootstrap
-	host      string
-	port      int
+	engine            *gin.Engine
+	bootstrap         *Bootstrap
+	host              string
+	port              int
+	subscribeMessages bool
 }
 
 func NewServer() (*Server, error) {
@@ -65,19 +67,33 @@ func NewWebSocketServer() (*Server, error) {
 	registerWebSocketRoutes(engine, bootstrap.Connection)
 
 	return &Server{
-		engine:    engine,
-		bootstrap: bootstrap,
-		host:      bootstrap.Config.WebSocket.Host,
-		port:      bootstrap.Config.WebSocket.Port,
+		engine:            engine,
+		bootstrap:         bootstrap,
+		host:              bootstrap.Config.WebSocket.Host,
+		port:              bootstrap.Config.WebSocket.Port,
+		subscribeMessages: true,
 	}, nil
 }
 
 func (s *Server) Run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	defer func() {
+		if s.bootstrap.MessageBus != nil {
+			_ = s.bootstrap.MessageBus.Close()
+		}
 		if s.bootstrap.DB != nil {
 			_ = s.bootstrap.DB.Close()
 		}
 	}()
+
+	if s.subscribeMessages && s.bootstrap.MessageBus != nil {
+		go func() {
+			if err := s.bootstrap.MessageBus.Subscribe(ctx, s.bootstrap.Hub.BroadcastMessage); err != nil {
+				log.Printf("message bus: subscriber stopped err=%v", err)
+			}
+		}()
+	}
 
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
 	log.Printf("server: listen addr=%s", addr)

@@ -1,14 +1,18 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"log"
+	"time"
 
 	"zcyp-im/internal/auth"
 	"zcyp-im/internal/config"
+	"zcyp-im/internal/eventbus"
 	adminhandler "zcyp-im/internal/handler/admin"
 	apihandler "zcyp-im/internal/handler/api"
 	imhandler "zcyp-im/internal/handler/im"
+	"zcyp-im/internal/model"
 	"zcyp-im/internal/repository"
 	memoryrepo "zcyp-im/internal/repository/memory"
 	mysqlrepo "zcyp-im/internal/repository/mysql"
@@ -31,6 +35,8 @@ type Bootstrap struct {
 	Connection      *imhandler.ConnectionHandler
 	MessageHandler  *imhandler.MessageHandler
 	MemberHandler   *imhandler.MemberHandler
+	Hub             *wsgateway.Hub
+	MessageBus      *eventbus.RedisMessageBus
 }
 
 func NewBootstrap() (*Bootstrap, error) {
@@ -55,6 +61,28 @@ func NewBootstrap() (*Bootstrap, error) {
 	tokenService := auth.NewTokenService(cfg.JWT)
 	imService := service.NewIMService(appService, userService, stores.conversationRepo, stores.memberRepo, stores.messageRepo, cfg.Moderation.BlockedWords)
 	hub := wsgateway.NewHub(imService)
+	var messageBroadcaster interface {
+		BroadcastMessage(conversationNo string, message model.Message)
+	} = hub
+	var messageBus *eventbus.RedisMessageBus
+	if cfg.Redis.Enabled {
+		messageBus = eventbus.NewRedisMessageBus(cfg.Redis)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		err := messageBus.Ping(ctx)
+		cancel()
+		if err != nil {
+			_ = messageBus.Close()
+			if db != nil {
+				_ = db.Close()
+			}
+			return nil, err
+		}
+		messageBroadcaster = messageBus
+		hub.SetPublisher(messageBus)
+		log.Printf("bootstrap: message_bus=redis address=%s channel=%s", cfg.Redis.Address, cfg.Redis.Channel)
+	} else {
+		log.Printf("bootstrap: message_bus=memory")
+	}
 
 	return &Bootstrap{
 		Config:          cfg,
@@ -66,10 +94,12 @@ func NewBootstrap() (*Bootstrap, error) {
 		UserHandler:     adminhandler.NewUserHandler(userService),
 		APIConversation: apihandler.NewConversationHandler(imService),
 		APIMember:       apihandler.NewMemberHandler(imService),
-		APIMessage:      apihandler.NewMessageHandler(imService, hub),
+		APIMessage:      apihandler.NewMessageHandler(imService, messageBroadcaster),
 		Connection:      imhandler.NewConnectionHandler(appService, userService, tokenService, hub),
-		MessageHandler:  imhandler.NewMessageHandler(imService, hub),
+		MessageHandler:  imhandler.NewMessageHandler(imService, messageBroadcaster),
 		MemberHandler:   imhandler.NewMemberHandler(imService),
+		Hub:             hub,
+		MessageBus:      messageBus,
 	}, nil
 }
 

@@ -19,6 +19,13 @@ mysql:
   max_idle_conns: 10
   conn_max_lifetime_minutes: 30
 
+redis:
+  enabled: false
+  address: "127.0.0.1:6379"
+  password: ""
+  db: 0
+  channel: "zcyp-im:messages"
+
 jwt:
   secret: ""
   issuer: "zcyp-im"

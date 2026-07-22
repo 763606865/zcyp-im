@@ -112,3 +112,19 @@ GET ws://<ws-host>:<ws-port>/im/connect?token=<token>
   - 禁言
   - 全员禁言
   - 审核开关
+
+## 5. 跨进程实时广播
+
+HTTP API 和 WebSocket 网关为独立进程时，必须启用 Redis 消息总线：
+
+```env
+ZCYP_IM_REDIS_ENABLED=true
+ZCYP_IM_REDIS_ADDRESS=127.0.0.1:6379
+ZCYP_IM_REDIS_PASSWORD=
+ZCYP_IM_REDIS_DB=0
+ZCYP_IM_REDIS_CHANNEL=zcyp-im:messages
+```
+
+HTTP 服务在消息落库后发布事件，所有 WebSocket 网关实例订阅事件并广播给本机已订阅该会话的连接。API 与 WebSocket 实例必须使用相同的 Redis 地址、DB 和频道。
+
+未启用 Redis 时使用进程内广播，只适用于 HTTP 路由和 WebSocket 连接共享同一个 Hub 的单进程模式；当前独立运行 `make run-api` 与 `make run-ws` 的部署必须启用 Redis。

@@ -11,6 +11,7 @@ type Config struct {
 	HTTP       HTTPConfig       `mapstructure:"http"`
 	WebSocket  HTTPConfig       `mapstructure:"websocket"`
 	MySQL      MySQLConfig      `mapstructure:"mysql"`
+	Redis      RedisConfig      `mapstructure:"redis"`
 	JWT        JWTConfig        `mapstructure:"jwt"`
 	Moderation ModerationConfig `mapstructure:"moderation"`
 }
@@ -32,6 +33,14 @@ type MySQLConfig struct {
 	MaxOpenConns    int    `mapstructure:"max_open_conns"`
 	MaxIdleConns    int    `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime_minutes"`
+}
+
+type RedisConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`
+	Address  string `mapstructure:"address"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+	Channel  string `mapstructure:"channel"`
 }
 
 type JWTConfig struct {
@@ -71,6 +80,11 @@ func Load() (Config, error) {
 	v.SetDefault("mysql.max_open_conns", 20)
 	v.SetDefault("mysql.max_idle_conns", 10)
 	v.SetDefault("mysql.conn_max_lifetime_minutes", 30)
+	v.SetDefault("redis.enabled", false)
+	v.SetDefault("redis.address", "127.0.0.1:6379")
+	v.SetDefault("redis.password", "")
+	v.SetDefault("redis.db", 0)
+	v.SetDefault("redis.channel", "zcyp-im:messages")
 	v.SetDefault("jwt.secret", "change-me")
 	v.SetDefault("jwt.issuer", "zcyp-im")
 	v.SetDefault("jwt.expire_hours", 24)
