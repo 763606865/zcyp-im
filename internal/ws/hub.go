@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"sync"
 	"time"
 
@@ -33,6 +34,7 @@ type messagePublisher interface {
 type Client struct {
 	hub     *Hub
 	conn    *websocket.Conn
+	appID   uint64
 	appCode string
 	userID  string
 
@@ -62,6 +64,7 @@ type inboundMessage struct {
 
 type outboundMessage struct {
 	Action         string         `json:"action"`
+	Event          string         `json:"event,omitempty"`
 	ConversationNo string         `json:"conversation_no,omitempty"`
 	Message        *model.Message `json:"message,omitempty"`
 	Error          string         `json:"error,omitempty"`
@@ -75,12 +78,13 @@ func NewHub(imService *service.IMService) *Hub {
 	}
 }
 
-func (h *Hub) Register(conn *websocket.Conn, appCode, userID string) *Client {
+func (h *Hub) Register(conn *websocket.Conn, appID uint64, appCode, userID string) *Client {
 	conn.SetReadLimit(maxMessageBytes)
 
 	client := &Client{
 		hub:           h,
 		conn:          conn,
+		appID:         appID,
 		appCode:       appCode,
 		userID:        userID,
 		subscriptions: make(map[string]struct{}),
@@ -125,6 +129,63 @@ func (h *Hub) Subscribe(client *Client, conversationNo string) error {
 }
 
 func (h *Hub) BroadcastMessage(conversationNo string, message model.Message) {
+	memberUserIDs, err := h.imService.ListActiveConversationMemberUserIDs(message.ConversationID)
+	if err != nil {
+		log.Printf("websocket: resolve message audience failed conversation_no=%s err=%v", conversationNo, err)
+		h.broadcastToSubscribers(conversationNo, message)
+		return
+	}
+
+	knownClients, unknownClients := h.classifyMessageClients(conversationNo, message.AppID, memberUserIDs)
+
+	payload := outboundMessage{
+		Action:         "message",
+		ConversationNo: conversationNo,
+		Message:        &message,
+	}
+
+	for _, client := range knownClients {
+		_ = client.WriteJSON(payload)
+	}
+
+	changedPayload := outboundMessage{
+		Action:         "conversation_changed",
+		Event:          "new_message",
+		ConversationNo: conversationNo,
+	}
+	for _, client := range unknownClients {
+		_ = client.WriteJSON(changedPayload)
+	}
+}
+
+func (h *Hub) classifyMessageClients(conversationNo string, appID uint64, memberUserIDs []string) ([]*Client, []*Client) {
+	members := make(map[string]struct{}, len(memberUserIDs))
+	for _, userID := range memberUserIDs {
+		members[userID] = struct{}{}
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	knownClients := make([]*Client, 0)
+	unknownClients := make([]*Client, 0)
+	for client := range h.clients {
+		if client.appID != appID {
+			continue
+		}
+		if _, ok := members[client.userID]; !ok {
+			continue
+		}
+		if _, subscribed := client.subscriptions[conversationNo]; subscribed {
+			knownClients = append(knownClients, client)
+		} else {
+			unknownClients = append(unknownClients, client)
+		}
+	}
+	return knownClients, unknownClients
+}
+
+func (h *Hub) broadcastToSubscribers(conversationNo string, message model.Message) {
 	h.mu.RLock()
 	subscribers := h.conversations[conversationNo]
 	clients := make([]*Client, 0, len(subscribers))
@@ -133,12 +194,7 @@ func (h *Hub) BroadcastMessage(conversationNo string, message model.Message) {
 	}
 	h.mu.RUnlock()
 
-	payload := outboundMessage{
-		Action:         "message",
-		ConversationNo: conversationNo,
-		Message:        &message,
-	}
-
+	payload := outboundMessage{Action: "message", ConversationNo: conversationNo, Message: &message}
 	for _, client := range clients {
 		_ = client.WriteJSON(payload)
 	}

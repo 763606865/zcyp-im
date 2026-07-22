@@ -67,6 +67,13 @@ func TestSystemConversationOnlyAcceptsAPIMessageFromSystemUser(t *testing.T) {
 	if message.MessageType != "system_notice" {
 		t.Fatalf("message_type = %q", message.MessageType)
 	}
+	audience, err := imService.ListActiveConversationMemberUserIDs(conversation.ID)
+	if err != nil {
+		t.Fatalf("list delivery audience: %v", err)
+	}
+	if len(audience) != 2 {
+		t.Fatalf("delivery audience = %#v", audience)
+	}
 
 	tests := []struct {
 		name        string

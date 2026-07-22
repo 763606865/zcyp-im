@@ -106,7 +106,8 @@ func (h *ConnectionHandler) Connect(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.userService.GetActiveUser(claims.AppCode, claims.UserID); err != nil {
+	user, err := h.userService.GetActiveUser(claims.AppCode, claims.UserID)
+	if err != nil {
 		status := http.StatusUnauthorized
 		if errors.Is(err, service.ErrUserNotFound) {
 			status = http.StatusNotFound
@@ -129,7 +130,7 @@ func (h *ConnectionHandler) Connect(c *gin.Context) {
 
 	log.Printf("ws connect accepted: app_code=%s user_id=%s remote=%s", claims.AppCode, claims.UserID, c.ClientIP())
 
-	client := h.hub.Register(conn, claims.AppCode, claims.UserID)
+	client := h.hub.Register(conn, user.AppID, claims.AppCode, claims.UserID)
 	client.Serve(context.Background())
 }
 

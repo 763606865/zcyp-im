@@ -71,6 +71,8 @@ GET ws://<ws-host>:<ws-port>/im/connect?token=<token>
 
 ### 3.2 广播消息
 
+当前连接已经订阅该会话时，服务端发送完整消息：
+
 ```json
 {
   "action": "message",
@@ -92,7 +94,28 @@ GET ws://<ws-host>:<ws-port>/im/connect?token=<token>
 }
 ```
 
-### 3.3 错误消息
+### 3.3 未知会话通知
+
+当前用户是会话成员、但当前连接尚未订阅该会话时，服务端发送轻量通知：
+
+```json
+{
+  "action": "conversation_changed",
+  "event": "new_message",
+  "conversation_no": "conv_xxxxxxxx"
+}
+```
+
+前端收到后应：
+
+1. 重新请求业务后端会话列表；
+2. 将新会话插入列表或按最新时间重新排序；
+3. 使用返回的 `conversation_no` 发送 `subscribe`；
+4. 按需拉取该会话的历史消息。
+
+该通知只发送给同一应用下状态为 `active` 的会话成员，不包含消息正文，业务会话列表仍由业务后端提供。
+
+### 3.4 错误消息
 
 ```json
 {

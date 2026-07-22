@@ -335,6 +335,23 @@ func (s *IMService) ListConversationMembers(appCode, conversationNo, userID stri
 	return s.memberRepo.List(conversation.ID)
 }
 
+// ListActiveConversationMemberUserIDs returns the delivery audience for an
+// already persisted message. It is intended for the trusted WebSocket gateway.
+func (s *IMService) ListActiveConversationMemberUserIDs(conversationID uint64) ([]string, error) {
+	members, err := s.memberRepo.List(conversationID)
+	if err != nil {
+		return nil, err
+	}
+
+	userIDs := make([]string, 0, len(members))
+	for _, member := range members {
+		if member.Status == "active" {
+			userIDs = append(userIDs, member.MemberUserID)
+		}
+	}
+	return userIDs, nil
+}
+
 func (s *IMService) AddConversationMembers(input AddConversationMembersInput) ([]model.ConversationMember, error) {
 	conversation, err := s.requireOwner(input.AppCode, input.ConversationNo, input.OperatorUserID)
 	if err != nil {

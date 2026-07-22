@@ -90,6 +90,7 @@ WebSocket:
 - client message `{"action":"subscribe","conversation_no":"conv_xxx"}`
 - client message `{"action":"send_message","conversation_no":"conv_xxx","message_type":"text","content":{"text":"hello"}}`
 - server event `{"action":"message","conversation_no":"conv_xxx","message":{...}}`
+- 未订阅但属于该会话的在线用户会收到 `{"action":"conversation_changed","event":"new_message","conversation_no":"conv_xxx"}`，前端应刷新业务会话列表后订阅该会话
 - API 与 WebSocket 网关独立运行时必须设置 `ZCYP_IM_REDIS_ENABLED=true`，两个进程使用相同的 Redis DB 和频道完成跨进程实时广播
 
 Conversation:
