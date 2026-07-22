@@ -96,6 +96,8 @@ func (h *UserHandler) writeUserError(c *gin.Context, err error) {
 		status = http.StatusForbidden
 	case errors.Is(err, service.ErrUserStatusInvalid):
 		status = http.StatusBadRequest
+	case errors.Is(err, service.ErrUserTypeInvalid):
+		status = http.StatusBadRequest
 	}
 
 	response.Error(c, status, err.Error())

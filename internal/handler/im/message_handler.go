@@ -56,6 +56,7 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 	req.AppCode = claims.AppCode
 	req.SenderUserID = claims.UserID
 	req.ConversationNo = c.Param("conversation_no")
+	req.Source = service.SendSourceClient
 
 	message, err := h.imService.SendMessage(req)
 	if err != nil {
@@ -109,6 +110,8 @@ func (h *MessageHandler) writeIMError(c *gin.Context, err error) {
 	case errors.Is(err, service.ErrConversationNotFound):
 		status = http.StatusNotFound
 	case errors.Is(err, service.ErrConversationTypeInvalid):
+		status = http.StatusBadRequest
+	case errors.Is(err, service.ErrSystemConversationInvalid):
 		status = http.StatusBadRequest
 	case errors.Is(err, service.ErrConversationMembersInvalid):
 		status = http.StatusBadRequest

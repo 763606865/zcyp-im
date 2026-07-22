@@ -7,6 +7,7 @@ type UpsertUserParams struct {
 	ExternalUserID string
 	Nickname       string
 	AvatarURL      string
+	UserType       string
 	Status         string
 }
 

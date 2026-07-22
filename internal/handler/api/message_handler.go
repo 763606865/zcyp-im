@@ -49,6 +49,7 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 		MessageType:    req.MessageType,
 		ClientMsgID:    req.ClientMsgID,
 		Content:        req.Content,
+		Source:         service.SendSourceAPI,
 	})
 	if err != nil {
 		writeIMError(c, err)

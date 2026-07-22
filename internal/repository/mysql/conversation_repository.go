@@ -19,8 +19,8 @@ func NewConversationRepository(db *sql.DB) *ConversationRepository {
 
 func (r *ConversationRepository) Create(params repository.CreateConversationParams) (model.Conversation, error) {
 	const query = `
-INSERT INTO conversations (conversation_no, conversation_key, app_id, type, subject, owner_user_id)
-VALUES (?, ?, ?, ?, ?, ?)`
+INSERT INTO conversations (conversation_no, conversation_key, app_id, type, scene, subject, owner_user_id)
+VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	if _, err := r.db.ExecContext(
 		context.Background(),
@@ -29,6 +29,7 @@ VALUES (?, ?, ?, ?, ?, ?)`
 		nullableString(params.ConversationKey),
 		params.AppID,
 		params.Type,
+		params.Scene,
 		params.Subject,
 		params.OwnerUserID,
 	); err != nil {
@@ -40,7 +41,7 @@ VALUES (?, ?, ?, ?, ?, ?)`
 
 func (r *ConversationRepository) GetByNo(conversationNo string) (model.Conversation, error) {
 	const query = `
-SELECT id, conversation_no, conversation_key, app_id, type, subject, owner_user_id, all_muted, require_review, created_at, updated_at
+SELECT id, conversation_no, conversation_key, app_id, type, scene, subject, owner_user_id, all_muted, require_review, created_at, updated_at
 FROM conversations
 WHERE conversation_no = ?
 LIMIT 1`
@@ -51,7 +52,7 @@ LIMIT 1`
 
 func (r *ConversationRepository) GetByKey(appID uint64, conversationKey string) (model.Conversation, error) {
 	const query = `
-SELECT id, conversation_no, conversation_key, app_id, type, subject, owner_user_id, all_muted, require_review, created_at, updated_at
+SELECT id, conversation_no, conversation_key, app_id, type, scene, subject, owner_user_id, all_muted, require_review, created_at, updated_at
 FROM conversations
 WHERE app_id = ? AND conversation_key = ?
 LIMIT 1`
@@ -94,6 +95,7 @@ func scanConversation(s conversationScanner, entity string) (model.Conversation,
 		&conversationKey,
 		&conversation.AppID,
 		&conversation.Type,
+		&conversation.Scene,
 		&conversation.Subject,
 		&conversation.OwnerUserID,
 		&conversation.AllMuted,

@@ -178,6 +178,7 @@ func (c *Client) Serve(ctx context.Context) {
 				MessageType:    msg.MessageType,
 				ClientMsgID:    msg.ClientMsgID,
 				Content:        msg.Content,
+				Source:         service.SendSourceWebSocket,
 			})
 			if err != nil {
 				_ = c.WriteJSON(outboundMessage{Action: "error", Error: err.Error()})

@@ -19,11 +19,12 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) Upsert(params repository.UpsertUserParams) (model.User, error) {
 	const query = `
-INSERT INTO im_users (app_id, external_user_id, nickname, avatar_url, status)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO im_users (app_id, external_user_id, nickname, avatar_url, user_type, status)
+VALUES (?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 nickname = VALUES(nickname),
 avatar_url = VALUES(avatar_url),
+user_type = VALUES(user_type),
 status = VALUES(status),
 updated_at = CURRENT_TIMESTAMP`
 
@@ -34,6 +35,7 @@ updated_at = CURRENT_TIMESTAMP`
 		params.ExternalUserID,
 		params.Nickname,
 		params.AvatarURL,
+		params.UserType,
 		params.Status,
 	); err != nil {
 		return model.User{}, err
@@ -44,7 +46,7 @@ updated_at = CURRENT_TIMESTAMP`
 
 func (r *UserRepository) GetByExternalUserID(appID uint64, externalUserID string) (model.User, error) {
 	const query = `
-SELECT id, app_id, external_user_id, nickname, avatar_url, status, created_at, updated_at
+SELECT id, app_id, external_user_id, nickname, avatar_url, user_type, status, created_at, updated_at
 FROM im_users
 WHERE app_id = ? AND external_user_id = ?
 LIMIT 1`
@@ -59,7 +61,7 @@ LIMIT 1`
 
 func (r *UserRepository) ListByAppID(appID uint64, limit int) ([]model.User, error) {
 	const query = `
-SELECT id, app_id, external_user_id, nickname, avatar_url, status, created_at, updated_at
+SELECT id, app_id, external_user_id, nickname, avatar_url, user_type, status, created_at, updated_at
 FROM im_users
 WHERE app_id = ?
 ORDER BY id DESC
@@ -94,6 +96,7 @@ func scanUser(s userScanner) (model.User, error) {
 		&user.ExternalUserID,
 		&user.Nickname,
 		&user.AvatarURL,
+		&user.UserType,
 		&user.Status,
 		&user.CreatedAt,
 		&user.UpdatedAt,

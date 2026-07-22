@@ -8,6 +8,7 @@ type Conversation struct {
 	ConversationKey string    `json:"conversation_key"`
 	AppID           uint64    `json:"app_id"`
 	Type            string    `json:"type"`
+	Scene           string    `json:"scene"`
 	Subject         string    `json:"subject"`
 	OwnerUserID     string    `json:"owner_user_id"`
 	AllMuted        bool      `json:"all_muted"`

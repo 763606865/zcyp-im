@@ -23,11 +23,19 @@ var ErrConversationMuted = errors.New("conversation member muted")
 var ErrConversationRoleInvalid = errors.New("conversation member role invalid")
 var ErrConversationMicStatusInvalid = errors.New("conversation mic status invalid")
 var ErrConversationReviewRejected = errors.New("conversation review rejected")
+var ErrSystemConversationInvalid = errors.New("system conversation invalid")
+
+const (
+	SendSourceAPI       = "api"
+	SendSourceClient    = "client"
+	SendSourceWebSocket = "websocket"
+)
 
 type CreateConversationInput struct {
 	AppCode         string   `json:"app_code" binding:"required"`
 	ConversationKey string   `json:"conversation_key"`
 	Type            string   `json:"type" binding:"required"`
+	Scene           string   `json:"scene"`
 	Subject         string   `json:"subject"`
 	OwnerUserID     string   `json:"owner_user_id"`
 	MemberUserIDs   []string `json:"member_user_ids"`
@@ -40,6 +48,7 @@ type SendMessageInput struct {
 	MessageType    string          `json:"message_type" binding:"required"`
 	ClientMsgID    string          `json:"client_msg_id"`
 	Content        json.RawMessage `json:"content" binding:"required"`
+	Source         string          `json:"-"`
 }
 
 type AddConversationMembersInput struct {
@@ -144,9 +153,14 @@ func (s *IMService) CreateConversation(input CreateConversationInput) (model.Con
 	}
 
 	input.ConversationKey = strings.TrimSpace(input.ConversationKey)
+	input.Type = strings.ToLower(strings.TrimSpace(input.Type))
+	input.Scene = strings.ToLower(strings.TrimSpace(input.Scene))
 	if input.ConversationKey != "" {
 		conversation, err := s.conversationRepo.GetByKey(app.ID, input.ConversationKey)
 		if err == nil {
+			if input.Scene == "system" && (conversation.Type != "single" || conversation.Scene != "system" || conversation.OwnerUserID != input.OwnerUserID) {
+				return model.Conversation{}, ErrSystemConversationInvalid
+			}
 			return conversation, nil
 		}
 		if !errors.Is(err, repository.ErrNotFound) {
@@ -158,8 +172,23 @@ func (s *IMService) CreateConversation(input CreateConversationInput) (model.Con
 		return model.Conversation{}, err
 	}
 
-	if _, err := s.userService.GetActiveUser(input.AppCode, input.OwnerUserID); err != nil {
+	owner, err := s.userService.GetActiveUser(input.AppCode, input.OwnerUserID)
+	if err != nil {
 		return model.Conversation{}, err
+	}
+	if err := validateConversationScene(input.Type, input.Scene, input.OwnerUserID, input.MemberUserIDs, owner); err != nil {
+		return model.Conversation{}, err
+	}
+
+	memberIDs := uniqueMembers(input.OwnerUserID, input.MemberUserIDs)
+	for _, memberUserID := range memberIDs {
+		memberUser, err := s.userService.GetActiveUser(input.AppCode, memberUserID)
+		if err != nil {
+			return model.Conversation{}, err
+		}
+		if strings.EqualFold(input.Scene, "system") && memberUserID != input.OwnerUserID && memberUser.UserType != "normal" {
+			return model.Conversation{}, ErrSystemConversationInvalid
+		}
 	}
 
 	conversationNo, err := randomCode("conv", 8)
@@ -172,6 +201,7 @@ func (s *IMService) CreateConversation(input CreateConversationInput) (model.Con
 		ConversationKey: input.ConversationKey,
 		AppID:           app.ID,
 		Type:            input.Type,
+		Scene:           input.Scene,
 		Subject:         input.Subject,
 		OwnerUserID:     input.OwnerUserID,
 	})
@@ -179,11 +209,7 @@ func (s *IMService) CreateConversation(input CreateConversationInput) (model.Con
 		return model.Conversation{}, err
 	}
 
-	memberIDs := uniqueMembers(input.OwnerUserID, input.MemberUserIDs)
 	for _, memberUserID := range memberIDs {
-		if _, err := s.userService.GetActiveUser(input.AppCode, memberUserID); err != nil {
-			return model.Conversation{}, err
-		}
 		if err := s.memberRepo.Add(repository.CreateConversationMemberParams{
 			AppID:          app.ID,
 			ConversationID: conversation.ID,
@@ -212,7 +238,11 @@ func (s *IMService) SendMessage(input SendMessageInput) (model.Message, error) {
 		return model.Message{}, ErrConversationAccessDenied
 	}
 
-	if _, err := s.userService.GetActiveUser(input.AppCode, input.SenderUserID); err != nil {
+	sender, err := s.userService.GetActiveUser(input.AppCode, input.SenderUserID)
+	if err != nil {
+		return model.Message{}, err
+	}
+	if err := validateSystemMessage(conversation, sender, input.Source, input.MessageType); err != nil {
 		return model.Message{}, err
 	}
 
@@ -651,6 +681,27 @@ func validateConversationType(conversationType string, memberUserIDs []string) e
 		return ErrConversationTypeInvalid
 	}
 
+	return nil
+}
+
+func validateConversationScene(conversationType, scene, ownerUserID string, memberUserIDs []string, owner model.User) error {
+	scene = strings.ToLower(strings.TrimSpace(scene))
+	if scene != "system" {
+		return nil
+	}
+	if strings.ToLower(conversationType) != "single" || owner.UserType != "system" || len(memberUserIDs) != 1 || memberUserIDs[0] == ownerUserID {
+		return ErrSystemConversationInvalid
+	}
+	return nil
+}
+
+func validateSystemMessage(conversation model.Conversation, sender model.User, source, messageType string) error {
+	if strings.ToLower(conversation.Scene) != "system" {
+		return nil
+	}
+	if source != SendSourceAPI || sender.UserType != "system" || strings.ToLower(messageType) != "system_notice" {
+		return ErrConversationSpeakNotAllowed
+	}
 	return nil
 }
 

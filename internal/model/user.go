@@ -8,6 +8,7 @@ type User struct {
 	ExternalUserID string    `json:"external_user_id"`
 	Nickname       string    `json:"nickname"`
 	AvatarURL      string    `json:"avatar_url"`
+	UserType       string    `json:"user_type"`
 	Status         string    `json:"status"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`

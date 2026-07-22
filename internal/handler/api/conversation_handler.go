@@ -18,6 +18,7 @@ type ConversationHandler struct {
 type createConversationRequest struct {
 	ConversationKey string   `json:"conversation_key"`
 	Type            string   `json:"type" binding:"required"`
+	Scene           string   `json:"scene"`
 	Subject         string   `json:"subject"`
 	OwnerUserID     string   `json:"owner_user_id" binding:"required"`
 	MemberUserIDs   []string `json:"member_user_ids"`
@@ -47,6 +48,7 @@ func (h *ConversationHandler) CreateConversation(c *gin.Context) {
 		AppCode:         app.AppCode,
 		ConversationKey: conversationKey,
 		Type:            req.Type,
+		Scene:           req.Scene,
 		Subject:         req.Subject,
 		OwnerUserID:     req.OwnerUserID,
 		MemberUserIDs:   req.MemberUserIDs,

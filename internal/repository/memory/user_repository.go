@@ -32,6 +32,7 @@ func (r *UserRepository) Upsert(params repository.UpsertUserParams) (model.User,
 	if ok {
 		user.Nickname = params.Nickname
 		user.AvatarURL = params.AvatarURL
+		user.UserType = params.UserType
 		user.Status = params.Status
 		user.UpdatedAt = now
 		r.users[key] = user
@@ -44,6 +45,7 @@ func (r *UserRepository) Upsert(params repository.UpsertUserParams) (model.User,
 		ExternalUserID: params.ExternalUserID,
 		Nickname:       params.Nickname,
 		AvatarURL:      params.AvatarURL,
+		UserType:       params.UserType,
 		Status:         params.Status,
 		CreatedAt:      now,
 		UpdatedAt:      now,

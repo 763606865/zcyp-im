@@ -20,6 +20,7 @@ type upsertUserRequest struct {
 	ExternalUserID string `json:"external_user_id" binding:"required"`
 	Nickname       string `json:"nickname"`
 	AvatarURL      string `json:"avatar_url"`
+	UserType       string `json:"user_type"`
 }
 
 type updateUserRequest struct {
@@ -47,6 +48,7 @@ func (h *UserHandler) UpsertUser(c *gin.Context) {
 		ExternalUserID: req.ExternalUserID,
 		Nickname:       req.Nickname,
 		AvatarURL:      req.AvatarURL,
+		UserType:       req.UserType,
 	})
 	if err != nil {
 		h.writeUserError(c, err)
@@ -93,7 +95,7 @@ func (h *UserHandler) IssueAccessToken(c *gin.Context) {
 	app := mustApp(c)
 	userID := c.Param("external_user_id")
 
-	if _, err := h.userService.GetActiveUser(app.AppCode, userID); err != nil {
+	if _, err := h.userService.GetTokenEligibleUser(app.AppCode, userID); err != nil {
 		h.writeUserError(c, err)
 		return
 	}
@@ -123,6 +125,10 @@ func (h *UserHandler) writeUserError(c *gin.Context, err error) {
 		status = http.StatusForbidden
 	case errors.Is(err, service.ErrUserStatusInvalid):
 		status = http.StatusBadRequest
+	case errors.Is(err, service.ErrUserTypeInvalid):
+		status = http.StatusBadRequest
+	case errors.Is(err, service.ErrSystemUserTokenNotAllowed):
+		status = http.StatusForbidden
 	}
 
 	response.Error(c, status, err.Error())

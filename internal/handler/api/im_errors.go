@@ -25,6 +25,8 @@ func writeIMError(c *gin.Context, err error) {
 		status = http.StatusNotFound
 	case errors.Is(err, service.ErrConversationTypeInvalid):
 		status = http.StatusBadRequest
+	case errors.Is(err, service.ErrSystemConversationInvalid):
+		status = http.StatusBadRequest
 	case errors.Is(err, service.ErrConversationMembersInvalid):
 		status = http.StatusBadRequest
 	case errors.Is(err, service.ErrConversationJoinNotAllowed):

@@ -7,6 +7,7 @@ type CreateConversationParams struct {
 	ConversationKey string
 	AppID           uint64
 	Type            string
+	Scene           string
 	Subject         string
 	OwnerUserID     string
 }

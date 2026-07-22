@@ -35,6 +35,7 @@ func (r *ConversationRepository) Create(params repository.CreateConversationPara
 		ConversationKey: params.ConversationKey,
 		AppID:           params.AppID,
 		Type:            params.Type,
+		Scene:           params.Scene,
 		Subject:         params.Subject,
 		OwnerUserID:     params.OwnerUserID,
 		AllMuted:        false,

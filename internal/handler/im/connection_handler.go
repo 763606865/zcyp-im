@@ -56,12 +56,15 @@ func (h *ConnectionHandler) IssueAccessToken(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.userService.GetActiveUser(req.AppCode, req.UserID); err != nil {
+	if _, err := h.userService.GetTokenEligibleUser(req.AppCode, req.UserID); err != nil {
 		status := http.StatusInternalServerError
 		if errors.Is(err, service.ErrUserNotFound) {
 			status = http.StatusNotFound
 		}
 		if errors.Is(err, service.ErrUserDisabled) {
+			status = http.StatusForbidden
+		}
+		if errors.Is(err, service.ErrSystemUserTokenNotAllowed) {
 			status = http.StatusForbidden
 		}
 		response.Error(c, status, err.Error())

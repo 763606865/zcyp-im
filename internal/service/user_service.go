@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"strings"
 
 	"zcyp-im/internal/model"
 	"zcyp-im/internal/repository"
@@ -10,12 +11,15 @@ import (
 var ErrUserNotFound = errors.New("user not found")
 var ErrUserDisabled = errors.New("user disabled")
 var ErrUserStatusInvalid = errors.New("user status invalid")
+var ErrUserTypeInvalid = errors.New("user type invalid")
+var ErrSystemUserTokenNotAllowed = errors.New("system user token not allowed")
 
 type UpsertUserInput struct {
 	AppCode        string `json:"app_code" binding:"required"`
 	ExternalUserID string `json:"external_user_id" binding:"required"`
 	Nickname       string `json:"nickname"`
 	AvatarURL      string `json:"avatar_url"`
+	UserType       string `json:"user_type"`
 }
 
 type UpdateUserStatusInput struct {
@@ -50,9 +54,20 @@ func (s *UserService) UpsertUser(input UpsertUserInput) (model.User, error) {
 	}
 
 	status := "active"
+	userType := strings.ToLower(strings.TrimSpace(input.UserType))
+	userTypeProvided := userType != ""
+	if userType == "" {
+		userType = "normal"
+	}
+	if userType != "normal" && userType != "system" {
+		return model.User{}, ErrUserTypeInvalid
+	}
 	existing, err := s.repo.GetByExternalUserID(app.ID, input.ExternalUserID)
 	if err == nil {
 		status = existing.Status
+		if !userTypeProvided {
+			userType = existing.UserType
+		}
 	}
 
 	return s.repo.Upsert(repository.UpsertUserParams{
@@ -60,6 +75,7 @@ func (s *UserService) UpsertUser(input UpsertUserInput) (model.User, error) {
 		ExternalUserID: input.ExternalUserID,
 		Nickname:       input.Nickname,
 		AvatarURL:      input.AvatarURL,
+		UserType:       userType,
 		Status:         status,
 	})
 }
@@ -88,6 +104,17 @@ func (s *UserService) GetActiveUser(appCode, externalUserID string) (model.User,
 	return user, nil
 }
 
+func (s *UserService) GetTokenEligibleUser(appCode, externalUserID string) (model.User, error) {
+	user, err := s.GetActiveUser(appCode, externalUserID)
+	if err != nil {
+		return model.User{}, err
+	}
+	if user.UserType == "system" {
+		return model.User{}, ErrSystemUserTokenNotAllowed
+	}
+	return user, nil
+}
+
 func (s *UserService) ListUsers(appCode string, limit int) ([]model.User, error) {
 	app, err := s.appService.GetApp(appCode)
 	if err != nil {
@@ -111,6 +138,7 @@ func (s *UserService) UpdateUserStatus(input UpdateUserStatusInput) (model.User,
 		ExternalUserID: user.ExternalUserID,
 		Nickname:       user.Nickname,
 		AvatarURL:      user.AvatarURL,
+		UserType:       user.UserType,
 		Status:         input.Status,
 	})
 }
@@ -136,6 +164,7 @@ func (s *UserService) UpdateUserProfile(input UpdateUserProfileInput) (model.Use
 		ExternalUserID: user.ExternalUserID,
 		Nickname:       nickname,
 		AvatarURL:      avatarURL,
+		UserType:       user.UserType,
 		Status:         user.Status,
 	})
 }
